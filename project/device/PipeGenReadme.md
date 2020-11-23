@@ -1,24 +1,24 @@
-# 各个PIPE_GEN说明
+# Description of each PIPE_GEN
 ## pipe_gen
 
-    为结构体中的各个字节创建各自的pipe
+    Create a separate pipe for each byte in the structure.
 
 ## pipe_gen_v2
 
-    为每个结构体创建一个pipe，把结构体中的字节串行依次送入pipe
+    Create a pipe for each construct, and feed the bytes from the construct into the pipe serially in sequence.
 
 ## pipe_gen_v3
 
-    使用char16数据类型设计设计pipe，使用char16作为临时变量temp，将结构体中的数据依次存入temp，最后将temp送入pipe，最大并行度为16*1=16，比较死，不行
+    Using char16 data type design design pipe, using char16 as a temporary variable temp, the data in the structure are saved into temp sequentially, and finally send temp into the pipe, the maximum parallelism is 16 * 1 = 16, more inflexible, not good.
 
 ## pipe_gen_v4
 
-    使用int16数据类型设计设计pipe，使用int16作为临时变量temp，将结构体中的数据依次存入temp，最后将temp送入pipe，最大并行度为16*4=64，        
+    Design the pipe using the int16 data type, use int16 as a temporary variable temp, store the data in the structure in temp, and finally feed temp into the pipe with a maximum parallelism of 16*4=64.
 
 ## pipe_gen_v5
-    直接将结构体送入pipe，但是需要结构体的大小和声明的pipe类型相符，示例如下。使用了int16声明了pipe，size_of(int16)=64，那么结构体的大小也必须是64
+    The structure is fed directly into the pipe, but the size of the structure must match the declared pipe type, as shown in the following example. The pipe is declared with int16, size_of(int16) = 64, so the size of the construct must be 64 as well.
 
-# 综合比较上面几个版本，v4和v5可能比较好用
+# Comparing the above versions, v4 and v5 are probably better.
 ```C
 // vec=4
 // lan=16
