@@ -356,13 +356,10 @@ void memRead(
 								bin_valid_buffer[(~flag)&0x01][win_itm_y*win_size_x + win_itm_x] = bin_valid;
 
 								// used as loop counters
-								if((win_itm_z==weight_dim3/VEC_SIZE-1) && (win_itm_y==win_size_y-1) && (win_itm_x==win_size_x-1))
-									win_itm_z = 0;
-								else if((win_itm_y==win_size_y-1) && (win_itm_x==win_size_x-1))
-									win_itm_z++;
-
-								if((win_itm_y==win_size_y-1) && (win_itm_x==win_size_x-1))
+								if((win_itm_y==win_size_y-1) && (win_itm_x==win_size_x-1)){
 									win_itm_y = 0;
+									win_itm_z++;
+								}
 								else if(win_itm_x==win_size_x-1)
 									win_itm_y++;
 
@@ -1057,8 +1054,7 @@ void memWrite(
 	bool   pool_on_signal=1;
     channel_scal output;
     __local DPTYPE buffer[LANE_NUM];
-	uint   base_addr_pool;
-	uint   base_addr_vec;
+	uint   base_addr;
 
 	uchar  vec_gp = 0;//which vec in one lane
 	ushort loop_x = 0;
@@ -1090,21 +1086,14 @@ void memWrite(
 		}
 		// fetch data from local buffer and write back to DDR
 		// perform vectorization in dim3 (global_z) by combining multiple DPTYPE data into lane_data type
-		if(pool_on == 1 && vec_gp == 0){
-			base_addr_pool = loop_z*out_dim1x2xbatch*LANE_NUM +(loop_y+batch_indx_dim2*out_dim2)*out_dim1xbatch*LANE_NUM + (loop_x+batch_indx_dim1*out_dim1)*LANE_NUM;
-			__attribute__((opencl_unroll_hint))
-			for(uchar ll=0; ll<LANE_NUM; ll++){
-				top[base_addr_pool + ll] = buffer[ll];
-			}
-		}
-		if(pool_on != 1){//padding offset must be ZERO!
-			// for(uchar vec_gp=0; vec_gp<LANE_NUM/VEC_SIZE; vec_gp++){
-			base_addr_vec = (loop_z*LANE_NUM+vec_gp*VEC_SIZE)/VEC_SIZE*out_dim1x2xbatch*VEC_SIZE + (loop_y+batch_indx_dim2*out_dim2)*out_dim1xbatch*VEC_SIZE + (loop_x+batch_indx_dim1*out_dim1)*VEC_SIZE;
-			__attribute__((opencl_unroll_hint))
-			for(uchar vv=0; vv<VEC_SIZE; vv++){
-				top[base_addr_vec+vv] = buffer[vec_gp*VEC_SIZE + vv];
-			}
-			// }
+		if(pool_on != 1)//padding offset must be ZERO!
+			base_addr = (loop_z*LANE_NUM+vec_gp*VEC_SIZE)/VEC_SIZE*out_dim1x2xbatch*VEC_SIZE + (loop_y+batch_indx_dim2*out_dim2)*out_dim1xbatch*VEC_SIZE + (loop_x+batch_indx_dim1*out_dim1)*VEC_SIZE;
+		else
+			base_addr = loop_z*out_dim1x2xbatch*LANE_NUM +(loop_y+batch_indx_dim2*out_dim2)*out_dim1xbatch*LANE_NUM + (loop_x+batch_indx_dim1*out_dim1)*LANE_NUM + vec_gp*VEC_SIZE;
+		
+		__attribute__((opencl_unroll_hint))
+		for(uchar vv=0; vv<VEC_SIZE; vv++){
+			top[base_addr+vv] = buffer[vec_gp*VEC_SIZE + vv];
 		}
 
 		if(pool_on == 1 && vec_gp == (LANE_NUM/VEC_SIZE-1)){
